@@ -7,6 +7,10 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <string>
 
 // Set I2C bus to use: Wire, Wire1, etc.
 #define WIRE Wire
@@ -23,6 +27,14 @@ IPAddress subnet(255,255,255,0);
 WebServer server(80);
 String i2cAddress;
 
+void handle_onConnect() {
+server.send(200, "text/plain", i2cAddress.c_str());
+}
+
+void handle_notFound() {
+  server.send(404, "text/plain", "Not Found");
+}
+
 void setup() {
   WIRE.begin();
 
@@ -34,9 +46,9 @@ void setup() {
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
-  
-  server.on("/", handle_OnConnect);
-  server.onNotFound(handle_NotFound);
+
+  server.on("/", handle_onConnect);
+  server.onNotFound(handle_notFound);
   server.begin();
 }
 
@@ -50,6 +62,8 @@ void loop() {
   Serial.println("Scanning...");
 
   nDevices = 0;
+
+  std::stringstream stream;
   for(address = 1; address < 127; address++ ) 
   {
     // The i2c_scanner uses the return value of
@@ -66,6 +80,11 @@ void loop() {
       Serial.print(address,HEX);
       Serial.println("  !");
 
+      stream.str("");
+      stream << "0x" << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(address) << '\n';
+
+      i2cAddress = String(stream.str().c_str());
+
       nDevices++;
     }
     else if (error==4) 
@@ -76,14 +95,12 @@ void loop() {
       Serial.println(address,HEX);
     }    
   }
-  if (nDevices == 0)
+  if (nDevices == 0) {
     Serial.println("No I2C devices found\n");
+    i2cAddress = "No I2C devices found\n";
+  }
   else
     Serial.println("done\n");
 
   delay(5000);           // wait 5 seconds for next scan
-}
-
-void handle_onConnect() {
-  server.send(200, "text/plain", i2cAddress.c_str());
 }
