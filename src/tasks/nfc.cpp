@@ -35,10 +35,10 @@ void NfcTask(void *parameter)
             int n = sizeof(whiteListUid) / sizeof(*whiteListUid);
         
             if (uidLength == n && std::equal(uid, uid + uidLength, whiteListUid)) {
-                Serial1.println("Authorized!");
-                authChanged = authorized ^ true;
-                Serial1.println("NFC: " + authChanged);
-                authorized = true;
+                boolean authBefore = authorized;
+                authorized = !authorized;
+                authChanged = authorized ^ authBefore;
+                delay(1000);
             } else {
                 Serial1.println("Not Authorized..");
             }

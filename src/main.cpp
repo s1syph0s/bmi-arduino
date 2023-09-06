@@ -7,31 +7,19 @@
 #include "Wire.h"
 
 #include "tasks/nfc.h"
+#include "tasks/ultrasonic.h"
 #include "defs.h"
 
 boolean authorized = false;
 boolean authChanged = false;
 
-String getLocalUidString(byte *_uid, unsigned int _uidLength)
-{
-    String uidString = "";
-    for (unsigned int i = 0; i < _uidLength; i++)
-    {
-        if (i > 0)
-        {
-            uidString += " ";
-        }
+float distanceCm = 0;
 
-        if (_uid[i] < 0xF)
-        {
-            uidString += "0";
-        }
+enum TurvaloState {locked, unlocked};
 
-        uidString += String((unsigned int)_uid[i], (unsigned char)HEX);
-    }
-    uidString.toUpperCase();
-    return uidString;
-}
+TurvaloState turvaloState;
+
+static void buzzerAuthChange();
 
 void setup() {
   Wire.begin(2, 1);
@@ -39,25 +27,38 @@ void setup() {
 
   Serial1.println("Turvalo test");
   NfcSetup();
+  UltrasonicSetup();
 
   // Buzzer setup
   pinMode(BUZZER_PIN, OUTPUT);
   delay(1000);
 
   xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
+  xTaskCreate(UltrasonicTask, "UltrasonicTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
-  Serial1.println(authChanged);
   if (authorized && authChanged) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(200);
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
+    Serial1.println("Authorized.");
+    buzzerAuthChange();
+    authChanged = false;
+  } else if (!authorized && authChanged) {
+    Serial1.println("Locked.");
+    buzzerAuthChange();
     authChanged = false;
   }
   delay(100);
+
+  Serial1.print("Distance (cm): ");
+  Serial1.println(distanceCm);
+}
+
+static void buzzerAuthChange() {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(100);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(200);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(100);
+  digitalWrite(BUZZER_PIN, LOW);
 }
