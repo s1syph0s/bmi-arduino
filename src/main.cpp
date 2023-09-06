@@ -7,6 +7,10 @@
 #include "Wire.h"
 
 #include "tasks/nfc.h"
+#include "defs.h"
+
+boolean authorized = false;
+boolean authChanged = false;
 
 String getLocalUidString(byte *_uid, unsigned int _uidLength)
 {
@@ -35,12 +39,25 @@ void setup() {
 
   Serial1.println("Turvalo test");
   NfcSetup();
+
+  // Buzzer setup
+  pinMode(BUZZER_PIN, OUTPUT);
   delay(1000);
 
   xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
-  Serial1.println("Main Task");
-  delay(1000);
+  Serial1.println(authChanged);
+  if (authorized && authChanged) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(200);
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    authChanged = false;
+  }
+  delay(100);
 }

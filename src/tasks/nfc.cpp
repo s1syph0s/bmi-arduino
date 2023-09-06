@@ -4,11 +4,14 @@
 #include "PN532.h"
 #include "NfcAdapter.h"
 #include "nfc.h"
+#include "defs.h"
 
 PN532_I2C pn532i2c(Wire);
 NfcAdapter nfc(pn532i2c);
 extern HardwareSerial Serial1;
 extern TwoWire Wire;
+extern boolean authorized;
+extern boolean authChanged;
 
 void NfcSetup()
 {
@@ -33,12 +36,16 @@ void NfcTask(void *parameter)
         
             if (uidLength == n && std::equal(uid, uid + uidLength, whiteListUid)) {
                 Serial1.println("Authorized!");
+                authChanged = authorized ^ true;
+                Serial1.println("NFC: " + authChanged);
+                authorized = true;
             } else {
                 Serial1.println("Not Authorized..");
             }
         } else {
             Serial1.println("Debug");
         }
+        delay(100);
     }
     
 }
