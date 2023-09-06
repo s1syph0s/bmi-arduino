@@ -8,6 +8,7 @@
 
 #include "tasks/nfc.h"
 #include "tasks/ultrasonic.h"
+#include "tasks/bmi.h"
 #include "defs.h"
 
 boolean authorized = false;
@@ -26,8 +27,11 @@ void setup() {
   Serial1.begin(9600, SERIAL_8N1, 12, 13);
 
   Serial1.println("Turvalo test");
+
   NfcSetup();
   UltrasonicSetup();
+  bmiSetup();
+  
 
   // Buzzer setup
   pinMode(BUZZER_PIN, OUTPUT);
@@ -35,6 +39,7 @@ void setup() {
 
   xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
   xTaskCreate(UltrasonicTask, "UltrasonicTask", 2048, NULL, 1, NULL);
+  xTaskCreate(bmiTask, "BmiTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
