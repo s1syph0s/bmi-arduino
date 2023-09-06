@@ -24,6 +24,7 @@ void UltrasonicTask(void *parameter) {
 
         duration = pulseIn(ULTR_ECHO, HIGH);
         distanceCm = duration * SOUND_SPEED / 2;
+        delay(88);
     }
     
 }
