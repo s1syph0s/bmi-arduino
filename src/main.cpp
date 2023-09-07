@@ -1,10 +1,9 @@
 #include "Arduino.h"
 #include "Wire.h"
 
-// #include "tasks/nfc.h"
-// #include "tasks/bmi.h"
+#include "tasks/nfc.h"
+#include "tasks/bmi.h"
 #include "tasks/ultrasonic.h"
-#include "tasks/i2c.h"
 #include "defs.h"
 #include "SparkFun_BMI270_Arduino_Library.h"
 
@@ -27,7 +26,7 @@ extern BMI270 imu;
 
 void setup() {
   Wire.begin(2, 1);
-  Serial1.begin(9600, SERIAL_8N1, 12, 13);
+  Serial1.begin(512000, SERIAL_8N1, 12, 13);
 
   Serial1.println("Turvalo test");
 
@@ -43,10 +42,8 @@ void setup() {
   delay(1000);
 
   xTaskCreate(UltrasonicTask, "UltrasonicTask", 2048, NULL, 1, NULL);
-  // xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
-  // xTaskCreate(bmiTask, "BmiTask", 2048, NULL, 1, NULL);
-  xTaskCreate(i2cTask, "i2cTask", 2048, NULL, 1, NULL);
-
+  xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
+  xTaskCreate(bmiTask, "BmiTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
