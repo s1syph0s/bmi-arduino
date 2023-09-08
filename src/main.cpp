@@ -9,6 +9,7 @@
 
 
 boolean authorized = false;
+boolean notAuthorized = false;
 boolean authChanged = false;
 
 float distanceCm = 0;
@@ -18,6 +19,7 @@ enum TurvaloState {locked, unlocked};
 TurvaloState turvaloState;
 
 static void buzzerAuthChange();
+static void buzzerNotAuth();
 static void printBmiData();
 
 SemaphoreHandle_t mutex;
@@ -55,6 +57,12 @@ void loop() {
     Serial1.println("Locked.");
     buzzerAuthChange();
     authChanged = false;
+  } else if (notAuthorized) {
+    Serial1.println("Not authorized!");
+    buzzerNotAuth();
+    xSemaphoreTake(mutex, portMAX_DELAY);
+    notAuthorized = false;
+    xSemaphoreGive(mutex);
   }
   delay(500);
 
@@ -70,6 +78,16 @@ static void buzzerAuthChange() {
   delay(200);
   digitalWrite(BUZZER_PIN, HIGH);
   delay(100);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+static void buzzerNotAuth() {
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(300);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(300);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(300);
   digitalWrite(BUZZER_PIN, LOW);
 }
 

@@ -13,6 +13,7 @@ extern HardwareSerial Serial1;
 extern TwoWire Wire;
 extern boolean authorized;
 extern boolean authChanged;
+extern boolean notAuthorized;
 
 extern SemaphoreHandle_t mutex;
 
@@ -62,10 +63,12 @@ void NfcTask(void *parameter)
                 boolean authBefore = authorized;
                 authorized = !authorized;
                 authChanged = authorized ^ authBefore;
-                delay(500);
             } else {
-                Serial1.println("NFC Tag not whitelisted..");
+                xSemaphoreTake(mutex, portMAX_DELAY);
+                notAuthorized = true;
+                xSemaphoreGive(mutex);
             }
+            delay(500);
         }
         else
         {
