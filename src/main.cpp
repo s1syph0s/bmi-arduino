@@ -22,7 +22,8 @@ static void buzzerAuthChange();
 static void buzzerNotAuth();
 static void printBmiData();
 
-SemaphoreHandle_t mutex;
+SemaphoreHandle_t i2cMutex;
+SemaphoreHandle_t notAuthMutex;
 
 extern BMI270 imu;
 
@@ -32,7 +33,8 @@ void setup() {
 
   Serial1.println("Turvalo test");
 
-  mutex = xSemaphoreCreateMutex();
+  i2cMutex = xSemaphoreCreateMutex();
+  notAuthMutex = xSemaphoreCreateMutex();
 
   NfcSetup();
   UltrasonicSetup();
@@ -60,9 +62,9 @@ void loop() {
   } else if (notAuthorized) {
     Serial1.println("Not authorized!");
     buzzerNotAuth();
-    xSemaphoreTake(mutex, portMAX_DELAY);
+    xSemaphoreTake(i2cMutex, portMAX_DELAY);
     notAuthorized = false;
-    xSemaphoreGive(mutex);
+    xSemaphoreGive(i2cMutex);
   }
   delay(500);
 

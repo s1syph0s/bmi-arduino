@@ -15,7 +15,8 @@ extern boolean authorized;
 extern boolean authChanged;
 extern boolean notAuthorized;
 
-extern SemaphoreHandle_t mutex;
+extern SemaphoreHandle_t i2cMutex;
+extern SemaphoreHandle_t notAuthMutex;
 
 void NfcSetup()
 {
@@ -54,9 +55,9 @@ void NfcTask(void *parameter)
         // 'uid' will be populated with the UID, and uidLength will indicate
         // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
         Serial1.println("Reading nfc...");
-        xSemaphoreTake(mutex, portMAX_DELAY);
+        xSemaphoreTake(i2cMutex, portMAX_DELAY);
         bool success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, &uid[0], &uidLength);
-        xSemaphoreGive(mutex);
+        xSemaphoreGive(i2cMutex);
 
         if (success) {
             if (uidLength == whiteListUidLength && std::equal(uid, uid+uidLength, whiteListUid)) {
@@ -64,16 +65,16 @@ void NfcTask(void *parameter)
                 authorized = !authorized;
                 authChanged = authorized ^ authBefore;
             } else {
-                xSemaphoreTake(mutex, portMAX_DELAY);
+                xSemaphoreTake(notAuthMutex, portMAX_DELAY);
                 notAuthorized = true;
-                xSemaphoreGive(mutex);
+                xSemaphoreGive(notAuthMutex);
             }
-            delay(500);
         }
         else
         {
             // PN532 probably timed out waiting for a card
             Serial1.println("Timed out waiting for a card");
         }
+        delay(1000);
     }
 }
