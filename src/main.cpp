@@ -4,6 +4,8 @@
 #include "tasks/nfc.h"
 #include "tasks/bmi.h"
 #include "tasks/ultrasonic.h"
+#include "tasks/alert.h"
+
 #include "defs.h"
 #include "SparkFun_BMI270_Arduino_Library.h"
 
@@ -11,6 +13,7 @@
 boolean authorized = false;
 boolean notAuthorized = false;
 boolean authChanged = false;
+boolean alert = false;
 
 float distanceCm = 0;
 
@@ -24,6 +27,7 @@ static void printBmiData();
 
 SemaphoreHandle_t i2cMutex;
 SemaphoreHandle_t notAuthMutex;
+SemaphoreHandle_t alertMutex;
 
 extern BMI270 imu;
 
@@ -35,6 +39,7 @@ void setup() {
 
   i2cMutex = xSemaphoreCreateMutex();
   notAuthMutex = xSemaphoreCreateMutex();
+  alertMutex = xSemaphoreCreateMutex();
 
   NfcSetup();
   UltrasonicSetup();
@@ -48,13 +53,18 @@ void setup() {
   xTaskCreate(UltrasonicTask, "UltrasonicTask", 2048, NULL, 1, NULL);
   xTaskCreate(NfcTask, "NfcTask", 2048, NULL, 1, NULL);
   xTaskCreate(bmiTask, "BmiTask", 2048, NULL, 1, NULL);
+  xTaskCreate(alertTask, "alertTask", 2048, NULL, 1, NULL);
 }
 
 void loop() {
   if (authorized && authChanged) {
     Serial1.println("Authorized.");
-    buzzerAuthChange();
     authChanged = false;
+    xSemaphoreTake(alertMutex, portMAX_DELAY);
+    alert = false;
+    xSemaphoreGive(alertMutex);
+    delay(50);
+    buzzerAuthChange();
   } else if (!authorized && authChanged) {
     Serial1.println("Locked.");
     buzzerAuthChange();

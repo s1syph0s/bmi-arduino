@@ -4,11 +4,25 @@
 
 #include "Wire.h"
 
+#define ALERT_THRESHOLD 0.8
+
 BMI270 imu;
 uint8_t i2cAddress = BMI2_I2C_SEC_ADDR; // 0x69
-extern SemaphoreHandle_t i2cMutex;
 
-displacementData bmiReading = {.currSpeed = 0, .distTravelled = 0, .millisBefore = 0};
+extern SemaphoreHandle_t i2cMutex;
+extern SemaphoreHandle_t alertMutex;
+
+extern boolean alert;
+
+struct alertTiming {
+    boolean startMeasuring;
+    uint32_t start;
+    uint32_t current;
+};
+
+alertTiming bmiTiming;
+static void evaluateAlert();
+static void resetBmiTiming();
 
 void bmiSetup() {
     // Check if sensor is connected and initialize
@@ -20,6 +34,7 @@ void bmiSetup() {
         delay(1000);
     }
     xSemaphoreGive(i2cMutex);
+    resetBmiTiming();
 }
 
 void bmiTask(void *parameter) {
@@ -29,35 +44,32 @@ void bmiTask(void *parameter) {
         xSemaphoreTake(i2cMutex, portMAX_DELAY);
         int8_t err = imu.getSensorData();
         xSemaphoreGive(i2cMutex);
+        evaluateAlert();
+        delay(500);
     }
 }
 
-static void evaluateRawData() {
-    uint32_t currMillis = imu.data.sensorTimeMillis;
-    if (currMillis - bmiReading.millisBefore < 0) {
-        return;
+static void evaluateAlert() {
+    if (abs(imu.data.accelZ) >= ALERT_THRESHOLD && !bmiTiming.startMeasuring) {
+        bmiTiming.startMeasuring = true;
+        bmiTiming.start = imu.data.sensorTimeMillis;
+        bmiTiming.current = imu.data.sensorTimeMillis;
+        Serial1.println("Start measuring");
     }
-    float accelZ = imu.data.accelZ; // Z in G
-    accelZ = gToMps2(accelZ); // Z in mps2
-    bmiReading.currSpeed = calculateCurrSpeed(bmiReading.currSpeed, accelZ, MILLIS_TO_S(currMillis));
-    bmiReading.distTravelled = calculateDistTravelled(bmiReading.distTravelled, accelZ, MILLIS_TO_S(currMillis));
+
+    if (abs(imu.data.accelZ) >= ALERT_THRESHOLD && bmiTiming.startMeasuring) {
+        bmiTiming.current = imu.data.sensorTimeMillis;
+        if (bmiTiming.current-bmiTiming.start > 3000) {
+            xSemaphoreTake(alertMutex, portMAX_DELAY);
+            alert = true;
+            xSemaphoreGive(alertMutex);
+            resetBmiTiming();
+        }
+    } else if (abs(imu.data.accelZ) < ALERT_THRESHOLD && bmiTiming.startMeasuring) {
+        resetBmiTiming();
+    }
 }
 
-
-/*
-* AccelZ in mps2
-* currSpeed in mps
-* timeS in s
-*/
-static float calculateCurrSpeed(float currSpeed, float accelZ, float timeS) {
-    return currSpeed + accelZ * timeS;
-}
-
-/*
-* AccelZ in mps2
-* currDistTravelled in m
-* timeS in s
-*/
-static float calculateDistTravelled(float currDistTravelled, float accelZ, float timeS) {
-    return currDistTravelled * timeS + (accelZ * pow(timeS, 2)) / 2;
+static void resetBmiTiming() {
+    bmiTiming = {.startMeasuring = false, .start = 0, .current = 0};
 }
