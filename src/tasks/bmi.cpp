@@ -13,6 +13,7 @@ extern SemaphoreHandle_t i2cMutex;
 extern SemaphoreHandle_t alertMutex;
 
 extern boolean alert;
+extern boolean authorized;
 
 struct alertTiming {
     boolean startMeasuring;
@@ -44,7 +45,9 @@ void bmiTask(void *parameter) {
         xSemaphoreTake(i2cMutex, portMAX_DELAY);
         int8_t err = imu.getSensorData();
         xSemaphoreGive(i2cMutex);
-        evaluateAlert();
+        if (!authorized) {
+            evaluateAlert();
+        }
         delay(500);
     }
 }
@@ -54,7 +57,6 @@ static void evaluateAlert() {
         bmiTiming.startMeasuring = true;
         bmiTiming.start = imu.data.sensorTimeMillis;
         bmiTiming.current = imu.data.sensorTimeMillis;
-        Serial1.println("Start measuring");
     }
 
     if (abs(imu.data.accelZ) >= ALERT_THRESHOLD && bmiTiming.startMeasuring) {
