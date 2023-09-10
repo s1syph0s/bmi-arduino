@@ -74,9 +74,9 @@ void loop() {
     if (!alert) {
       buzzerNotAuth();
     }
-    xSemaphoreTake(i2cMutex, portMAX_DELAY);
+    xSemaphoreTake(notAuthMutex, portMAX_DELAY);
     notAuthorized = false;
-    xSemaphoreGive(i2cMutex);
+    xSemaphoreGive(notAuthMutex);
   }
   delay(500);
 
