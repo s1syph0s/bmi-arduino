@@ -71,7 +71,9 @@ void loop() {
     authChanged = false;
   } else if (notAuthorized) {
     Serial1.println("Not authorized!");
-    buzzerNotAuth();
+    if (!alert) {
+      buzzerNotAuth();
+    }
     xSemaphoreTake(i2cMutex, portMAX_DELAY);
     notAuthorized = false;
     xSemaphoreGive(i2cMutex);
